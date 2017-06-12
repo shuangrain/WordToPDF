@@ -33,7 +33,6 @@
             this.lstFile = new System.Windows.Forms.ListBox();
             this.btnStartConvert = new System.Windows.Forms.Button();
             this.btnClear = new System.Windows.Forms.Button();
-            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.SuspendLayout();
             // 
             // btnOpenFile
@@ -87,11 +86,6 @@
             this.btnClear.UseVisualStyleBackColor = true;
             this.btnClear.Click += new System.EventHandler(this.btnClear_Click);
             // 
-            // backgroundWorker1
-            // 
-            this.backgroundWorker1.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker1_DoWork);
-            this.backgroundWorker1.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker1_RunWorkerCompleted);
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -115,7 +109,6 @@
         private System.Windows.Forms.ListBox lstFile;
         private System.Windows.Forms.Button btnStartConvert;
         private System.Windows.Forms.Button btnClear;
-        private System.ComponentModel.BackgroundWorker backgroundWorker1;
     }
 }
 

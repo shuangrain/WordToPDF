@@ -1,11 +1,8 @@
-﻿using Microsoft.Office.Interop.Word;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -14,6 +11,8 @@ namespace WordToPDF
 {
     public partial class Form1 : Form
     {
+        private readonly string[] _wordExt = new string[] { ".doc", ".docx" };
+
         public Form1()
         {
             InitializeComponent();
@@ -24,13 +23,14 @@ namespace WordToPDF
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Word 檔(*.docx,*.doc)|*.docx;*.doc";
             openFileDialog.Multiselect = true;
+
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                for (int i = 0; i < openFileDialog.FileNames.Length; i++)
+                lstFile.Items.AddRange(openFileDialog.FileNames.Where(x =>
                 {
-                    String filePath = openFileDialog.FileNames.GetValue(i).ToString();
-                    lstFile.Items.Add(filePath);
-                }
+                    string ext = Path.GetExtension(x).ToLower();
+                    return _wordExt.Any(y => y == ext);
+                }).ToArray());
             }
         }
 
@@ -38,10 +38,21 @@ namespace WordToPDF
         {
             if (lstFile.Items.Count > 0)
             {
-                backgroundWorker1.RunWorkerAsync();
+                //lock
                 btnOpenFile.Enabled = false;
                 btnStartConvert.Enabled = false;
                 btnClear.Enabled = false;
+
+                //run
+                conventWordToPdf(lstFile.Items.Cast<string>().ToList()).ContinueWith((task) =>
+                {
+                    //unlock
+                    MessageBox.Show("完成！");
+                    btnOpenFile.Enabled = true;
+                    btnStartConvert.Enabled = true;
+                    btnClear.Enabled = true;
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+
             }
             else
             {
@@ -49,40 +60,33 @@ namespace WordToPDF
             }
         }
 
-        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
-        {
-            PdfConverter pdfConverter = new PdfConverter();
-            for (int i = 0; i < lstFile.Items.Count; i++)
-            {
-                String tmp_FilePath = lstFile.Items[i].ToString();
-                var pdf = pdfConverter.GetPDF(tmp_FilePath);
-                if (tmp_FilePath.Split('.')[1] == "doc")
-                {
-                    tmp_FilePath.Replace(".doc", "");
-
-                    tmp_FilePath.Substring(0, tmp_FilePath.Length - 4);
-                }
-                else if (tmp_FilePath.Split('.')[1] == "docx")
-                {
-                    tmp_FilePath.Replace(".docx", "");
-                }
-                System.IO.File.WriteAllBytes(tmp_FilePath + ".pdf", pdf);
-            }
-            pdfConverter.Dispose();
-        }
-
-        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            lstFile.Items.Clear();
-            MessageBox.Show("完成！");
-            btnOpenFile.Enabled = true;
-            btnStartConvert.Enabled = true;
-            btnClear.Enabled = true;
-        }
-
         private void btnClear_Click(object sender, EventArgs e)
         {
             lstFile.Items.Clear();
+        }
+
+        private Task conventWordToPdf(List<string> list)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                PDFConverter pdfConverter = new PDFConverter();
+                list.AsParallel()
+                    .ForAll(item =>
+                    {
+                        byte[] pdf = pdfConverter.GetPDF(item);
+                        string ext = Path.GetExtension(item);
+                        File.WriteAllBytes(item.Replace(ext, ".pdf"), pdf);
+
+                        BeginInvoke(new Action(() =>
+                        {
+                            lstFile.Items.Remove(item);
+                        }));
+                    });
+
+                pdfConverter.Dispose();
+                pdfConverter = null;
+            });
+
         }
     }
 }
